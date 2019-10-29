@@ -171,14 +171,14 @@ RCT_EXPORT_METHOD(openCamera:(NSDictionary *)options
         }
 
         dispatch_async(dispatch_get_main_queue(), ^{
-            
+
             UIImagePickerController *picker = [[UIImagePickerController alloc] init];
             picker.delegate = self;
             picker.allowsEditing = NO;
             picker.sourceType = UIImagePickerControllerSourceTypeCamera;
 
             NSString *mediaType = [self.options objectForKey:@"mediaType"];
-            
+
             if ([mediaType isEqualToString:@"video"]) {
                 NSArray *availableTypes = [UIImagePickerController availableMediaTypesForSourceType:UIImagePickerControllerSourceTypeCamera];
 
@@ -191,7 +191,7 @@ RCT_EXPORT_METHOD(openCamera:(NSDictionary *)options
             if ([[self.options objectForKey:@"useFrontCamera"] boolValue]) {
                 picker.cameraDevice = UIImagePickerControllerCameraDeviceFront;
             }
-            
+
             [[self getRootVC] presentViewController:picker animated:YES completion:nil];
         });
     }];
@@ -204,7 +204,7 @@ RCT_EXPORT_METHOD(openCamera:(NSDictionary *)options
 
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
     NSString* mediaType = [info objectForKey:UIImagePickerControllerMediaType];
-    
+
     if (CFStringCompare ((__bridge CFStringRef) mediaType, kUTTypeMovie, 0) == kCFCompareEqualTo) {
         NSURL *url = [info objectForKey:UIImagePickerControllerMediaURL];
         AVURLAsset *asset = [AVURLAsset assetWithURL:url];
@@ -319,7 +319,7 @@ RCT_EXPORT_METHOD(openPicker:(NSDictionary *)options
             imagePickerController.minimumNumberOfSelection = abs([[self.options objectForKey:@"minFiles"] intValue]);
             imagePickerController.maximumNumberOfSelection = abs([[self.options objectForKey:@"maxFiles"] intValue]);
             imagePickerController.showsNumberOfSelectedAssets = [[self.options objectForKey:@"showsSelectedCount"] boolValue];
-            
+
             NSArray *smartAlbums = [self.options objectForKey:@"smartAlbums"];
             if (smartAlbums != nil) {
                 NSDictionary *albums = @{
@@ -352,7 +352,7 @@ RCT_EXPORT_METHOD(openPicker:(NSDictionary *)options
                                          @"Animated" : @(PHAssetCollectionSubtypeSmartAlbumAnimated),
                                          @"LongExposure" : @(PHAssetCollectionSubtypeSmartAlbumLongExposures),
                                          };
-                
+
                 NSMutableArray *albumsToShow = [NSMutableArray arrayWithCapacity:smartAlbums.count];
                 for (NSString* smartAlbum in smartAlbums) {
                     if ([albums objectForKey:smartAlbum] != nil) {
@@ -375,7 +375,7 @@ RCT_EXPORT_METHOD(openPicker:(NSDictionary *)options
                     imagePickerController.mediaType = QBImagePickerMediaTypeAny;
                 }
             }
-            
+
             [imagePickerController setModalPresentationStyle: UIModalPresentationFullScreen];
             [[self getRootVC] presentViewController:imagePickerController animated:YES completion:nil];
         });
@@ -472,6 +472,14 @@ RCT_EXPORT_METHOD(openCropper:(NSDictionary *)options
             AVAsset *compressedAsset = [AVAsset assetWithURL:outputURL];
             AVAssetTrack *track = [[compressedAsset tracksWithMediaType:AVMediaTypeVideo] firstObject];
 
+            CGSize videoSize = track.naturalSize;
+            CGAffineTransform t = track.preferredTransform;
+            if((t.a == 0 && t.b == 1.0 && t.c == -1.0 && t.d == 0) ||
+               (t.a == 0 && t.b == -1.0 && t.c == 1.0 && t.d == 0)){
+                videoSize = CGSizeMake(videoSize.height, videoSize.width);
+            }
+
+
             NSNumber *fileSizeValue = nil;
             [outputURL getResourceValue:&fileSizeValue
                                  forKey:NSURLFileSizeKey
@@ -482,8 +490,8 @@ RCT_EXPORT_METHOD(openCropper:(NSDictionary *)options
                                         withSourceURL:[sourceURL absoluteString]
                                   withLocalIdentifier:localIdentifier
                                          withFilename:fileName
-                                            withWidth:[NSNumber numberWithFloat:track.naturalSize.width]
-                                           withHeight:[NSNumber numberWithFloat:track.naturalSize.height]
+                                            withWidth:[NSNumber numberWithFloat:videoSize.width]
+                                           withHeight:[NSNumber numberWithFloat:videoSize.height]
                                              withMime:@"video/mp4"
                                              withSize:fileSizeValue
                                              withData:nil
@@ -561,7 +569,7 @@ RCT_EXPORT_METHOD(openCropper:(NSDictionary *)options
     PHImageRequestOptions* options = [[PHImageRequestOptions alloc] init];
     options.synchronous = NO;
     options.networkAccessAllowed = YES;
-    
+
     if ([[[self options] objectForKey:@"multiple"] boolValue]) {
         NSMutableArray *selections = [[NSMutableArray alloc] init];
 
@@ -611,7 +619,7 @@ RCT_EXPORT_METHOD(openCropper:(NSDictionary *)options
                              [lock lock];
                              @autoreleasepool {
                                  UIImage *imgT = [UIImage imageWithData:imageData];
-                                 
+
                                  Boolean forceJpg = [[self.options valueForKey:@"forceJpg"] boolValue];
 
                                  NSNumber *compressQuality = [self.options valueForKey:@"compressImageQuality"];
@@ -893,7 +901,7 @@ RCT_EXPORT_METHOD(openCropper:(NSDictionary *)options
     // so resize image
     CGSize desiredImageSize = CGSizeMake([[[self options] objectForKey:@"width"] intValue],
                                          [[[self options] objectForKey:@"height"] intValue]);
-    
+
     UIImage *resizedImage = [croppedImage resizedImageToFitInSize:desiredImageSize scaleIfSmaller:YES];
     ImageResult *imageResult = [self.compression compressImage:resizedImage withOptions:self.options];
 
